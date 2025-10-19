@@ -1,0 +1,23 @@
+2. Makes sure it looks good on phone and is responsive
+
+3. Add fuzzy search to the search bar
+
+4. Add Levenshtein (“Did you mean…”)
+
+5. Track which topics are searched most often & personal Trending
+
+6. Specific Search (user-set parameters: time, date, sources)
+
+7. 7 tabs navigation (Home (home screen, search tab, default, Socrates logo), How it Works, About, Terms, Specific Search, Previous Searches, Personal accommodations)
+
+8. Framer Motion transitions
+
+9. Standard highlight on hover for objects
+
+10. A nice glowing minimalist dark-bluish outline of several popular figures
+
+11. Canvas drawing that fades after 10s with glowing lines
+
+Error handling
+1
+12. UI for actual results
