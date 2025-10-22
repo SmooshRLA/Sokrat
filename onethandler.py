@@ -1,0 +1,32 @@
+from onetwebservice import OnetWebService
+from dotenv import load_dotenv
+import os 
+
+load_dotenv()
+
+USERNAME = os.getenv("ONET_USERNAME")
+PASSWORD = os.getenv("ONET_PASSWORD")
+ONET_WS = OnetWebService(USERNAME, PASSWORD)
+
+def check_connected():
+    version_info = ONET_WS.call('about')
+    if 'error' in version_info:
+        return False 
+    
+    return True
+
+def search_keyword_onet(user_query):
+    if not check_connected(): return 
+
+    keyword_results = ONET_WS.call('online/search', ('keyword', user_query), ('end', 5))
+    if 'error' in keyword_results: return 
+
+    if (not 'occupation' in keyword_results) or (len(keyword_results['occupation']) == 0):
+        print("no relevant occupations found.")
+    else:
+        print("Most relevant occupations for \"" + user_query + "\":")
+        for occ in keyword_results['occupation']:
+            print("  " + occ['code'] + " - " + occ['title'])
+        print("")
+
+search_keyword_onet("python algorithms")
