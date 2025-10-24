@@ -25,7 +25,7 @@ body {
 .app-container img {
   /* Make the logo a block-level element and center it reliably */
   display: block;
-  width: clamp(160px, 60vw, 900px); /*  I AIN'T GONNA LIE, COPILOT WROTE THIS, GOT IT TO WORK ON MOBILE BUT KEPT GETTING PROBLEMS ON NORMAL DESKTOP IT WORKS!!!!!!!!!!!*/
+  width: clamp(160px, 60vw, 900px); 
   
   max-width: 90%;
   height: auto;
