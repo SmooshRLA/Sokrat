@@ -1,6 +1,7 @@
 from onetwebservice import OnetWebService
 from dotenv import load_dotenv
 import os 
+import json
 
 load_dotenv()
 
@@ -15,7 +16,7 @@ def check_connected():
     
     return True
 
-def search_keyword_onet(user_query):
+async def search_keyword_onet(user_query):
     if not check_connected(): return 
 
     keyword_results = ONET_WS.call('online/search', ('keyword', user_query), ('end', 5))
@@ -34,4 +35,4 @@ def search_keyword_onet(user_query):
             occupations.append(occupation_info)
         
         print(occupations)
-        return occupations
+        return json.dumps(occupations)

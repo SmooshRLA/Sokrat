@@ -78,7 +78,7 @@ def extract_transcript(video_ID):
 
     return transcript_string
 
-def search_video(user_query, limit):
+async def search_video(user_query, limit):
     vidoes_search = VideosSearch(user_query, limit = limit)
 
     # Example JSON output: https://pypi.org/project/youtube-search-python/

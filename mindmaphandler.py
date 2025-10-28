@@ -54,7 +54,7 @@ client = OpenAI(
 )
 
 # Returns a JSON object similar to the example given in the prompt
-def create_mind_map(user_query):
+async def create_mind_map(user_query):
     if not user_query: return 
 
     messages = [
@@ -73,6 +73,4 @@ def create_mind_map(user_query):
     validated = MindMapNode.model_validate_json(response_content) # you probabyly need a try catch block bc validatoin error
     print(validated)
 
-    parsed_content = json.loads(response_content)
-    print(parsed_content)
-    return parsed_content
+    return response_content

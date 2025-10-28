@@ -1,7 +1,7 @@
 import requests
 import json
 
-def search_books(user_query):
+async def search_books(user_query):
     result = requests.get(url = f"https://openlibrary.org/search.json?q={user_query}")
     text = result.text
     formatted = json.loads(text)
@@ -24,7 +24,7 @@ def search_books(user_query):
 
     #print(book_list)
 
-    return book_list
+    return json.dumps(book_list)
 
 
 #search_books("python data structures")
