@@ -93,7 +93,7 @@ async def scrape_query_pages(user_query):
     BFS_CRAWL_STRATEGY = BFSDeepCrawlStrategy(
         max_depth = 1,
         include_external = False,
-        max_pages = 3,
+        max_pages = 7,
         filter_chain = FilterChain([URL_FILTER])
     )
 
@@ -120,6 +120,6 @@ async def scrape_query_pages(user_query):
     await crawler.close()
     await scrape_course_pages(course_URLS, user_query)
  
-if __name__ == "__main__":
-    load_dotenv()
-    asyncio.run(scrape_query_pages("algorithms"))
+#if __name__ == "__main__":
+#    load_dotenv()
+#    asyncio.run(scrape_query_pages("algorithms"))

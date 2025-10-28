@@ -22,11 +22,16 @@ def search_keyword_onet(user_query):
     if 'error' in keyword_results: return 
 
     if (not 'occupation' in keyword_results) or (len(keyword_results['occupation']) == 0):
-        print("no relevant occupations found.")
+        return
     else:
-        print("Most relevant occupations for \"" + user_query + "\":")
+        occupations = []
         for occ in keyword_results['occupation']:
-            print("  " + occ['code'] + " - " + occ['title'])
-        print("")
-
-search_keyword_onet("python algorithms")
+            occupation_info = {
+                "onet_code": occ['code'],
+                "job_title": occ['title'],
+                "link_to": occ['href']
+            }
+            occupations.append(occupation_info)
+        
+        print(occupations)
+        return occupations

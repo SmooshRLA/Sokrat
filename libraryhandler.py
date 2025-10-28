@@ -8,18 +8,24 @@ def search_books(user_query):
     book_list = []
 
     for book in formatted["docs"]:
+        print(book)
         title = book["title"]
         key = book['key']
         book_info = {
             "title": title, 
             "link": f"https://openlibrary.org{key}",
         }
+
+        author_exists = "author_name" in book 
+        if author_exists:
+            book_info["authors"] = book["author_name"]
+
         book_list.append(book_info)
 
-    print(book_list)
+    #print(book_list)
 
     return book_list
 
 
-search_books("python data structures")
+#search_books("python data structures")
  
