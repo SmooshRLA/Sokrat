@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Sokrat — Search Results (Static)</title>
+    <!-- Google Fonts used in the original project -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CDN for utility classes (keeps the HTML/CSS conversion small and accurate) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              background: '#0f172a',
+              foreground: '#f1f5f9',
+              'muted-foreground': '#94a3b8',
+              primary: '#3b82f6'
+            }
+          }
+        }
+      }
+    </script>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+      /* Ensure basic styles are applied even if external CSS fails */
+      body {
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+        color: #f1f5f9;
+        min-height: 100vh;
+        margin: 0;
+        font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+      }
+    </style>
+  </head>
+  <body class="font-sans antialiased">
+    <!-- Fixed Search Bar -->
+    <header class="sticky top-0 z-50 border-b border-white/10 bg-[#1e293b]/80 backdrop-blur-xl">
+      <div class="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
+        <div class="flex items-center gap-4">
+          <div class="flex items-center gap-3">
+            <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 p-1 shadow-lg shadow-blue-500/50 overflow-hidden">
+              <img src="images/TransparentSokrat.png" alt="Sokrat Logo" class="w-full h-full object-contain"/>
+            </div>
+            <span class="font-sans text-2xl font-bold text-foreground">Sokrat</span>
+          </div>
+
+          <div class="relative flex-1">
+            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">🔎</span>
+            <input id="searchInput" type="text" placeholder="Search for courses..." value="philosophy" class="h-12 w-full pl-12 pr-4 bg-[#0f172a]/50 border border-white/20 text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/50 rounded-xl transition-all">
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Filter Bar -->
+    <div class="border-b border-white/10 bg-[#1e293b]/40 backdrop-blur-md">
+      <div class="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
+        <div class="flex flex-wrap items-center gap-3">
+          <span class="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Filter by:</span>
+
+          <div class="flex gap-2">
+            <button class="px-3 py-2 rounded-xl bg-gradient-to-r from-blue-600/20 to-cyan-600/20 border border-white/20 text-foreground font-medium">All Categories ▾</button>
+            <button class="px-3 py-2 rounded-xl bg-gradient-to-r from-blue-600/20 to-cyan-600/20 border border-white/20 text-foreground font-medium">Any Duration ▾</button>
+            <button class="px-3 py-2 rounded-xl bg-gradient-to-r from-blue-600/20 to-cyan-600/20 border border-white/20 text-foreground font-medium">All Levels ▾</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+      <!-- Results Section -->
+    <main class="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+      <div class="mb-8 animate-fade-in-up">
+        <h1 class="text-balance font-sans text-3xl font-bold text-foreground">Search Results for <span id="queryHighlight" class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400">"philosophy"</span></h1>
+        <p class="mt-2 text-base text-muted-foreground"><span id="resultsCount">Found 6</span> courses matching your query</p>
+      </div>
+
+      <!-- Controls: search + selects -->
+      <div class="mb-6 flex flex-wrap items-center gap-4">
+        <div class="relative flex-1 max-w-xl">
+          <span class="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">🔎</span>
+          <input id="searchInput" type="text" placeholder="Search for courses..." value="philosophy" class="h-12 w-full pl-12 pr-4 bg-[#0f172a]/50 border border-white/20 text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/50 rounded-xl transition-all">
+        </div>
+
+        <select id="categorySelect" class="h-12 px-3 rounded-xl bg-[#1e293b]/40 border border-white/20 text-foreground">
+          <option>All Categories</option>
+          <option>Philosophy</option>
+          <option>History</option>
+          <option>Art History</option>
+          <option>Literature</option>
+        </select>
+
+        <select id="durationSelect" class="h-12 px-3 rounded-xl bg-[#1e293b]/40 border border-white/20 text-foreground">
+          <option>Any Duration</option>
+          <option>6 weeks</option>
+          <option>8 weeks</option>
+          <option>10 weeks</option>
+          <option>12+ weeks</option>
+        </select>
+
+        <select id="levelSelect" class="h-12 px-3 rounded-xl bg-[#1e293b]/40 border border-white/20 text-foreground">
+          <option>All Levels</option>
+          <option>Beginner</option>
+          <option>Intermediate</option>
+          <option>Advanced</option>
+        </select>
+      </div>
+
+      <div id="cards" class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3"></div>
+
+      <div class="mt-14 flex flex-col items-center gap-4">
+        <a href="index.html" class="text-white hover:text-blue-400 transition-colors">← Back to Search</a>
+        <button id="loadMoreBtn" class="min-w-[220px] h-12 font-semibold bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-xl shadow-lg">Load More Courses</button>
+      </div>
+    </main>
+
+    <script>
+      // Client-side renderer: makes the static page fully interactive without any other files.
+      (function(){
+        const courses = [
+          {
+            id: 1,
+            title: "Introduction to Philosophy",
+            description:
+              "Explore fundamental questions about existence, knowledge, values, reason, mind, and language through the works of great thinkers.",
+            duration: "8 weeks",
+            level: "Beginner",
+            rating: 4.8,
+            category: "Philosophy",
+          },
+  {
+    id: 2,
+    title: "Ancient Greek History",
+    description:
+      "Journey through the rise and fall of ancient Greek civilization, from the Bronze Age to the Hellenistic period.",
+    duration: "10 weeks",
+    level: "Intermediate",
+    rating: 4.9,
+    category: "History",
+  },
+  {
+    id: 3,
+    title: "Critical Thinking & Logic",
+    description:
+      "Develop essential reasoning skills to analyze arguments, identify fallacies, and construct sound logical frameworks.",
+    duration: "6 weeks",
+    level: "Beginner",
+    rating: 4.7,
+    category: "Philosophy",
+  },
+  {
+    id: 4,
+    title: "Renaissance Art & Culture",
+    description:
+      "Discover the artistic revolution that transformed Europe, studying masterworks and the cultural context that shaped them.",
+    duration: "12 weeks",
+    level: "Advanced",
+    rating: 4.9,
+    category: "Art History",
+  },
+  {
+    id: 5,
+    title: "Ethics in Modern Society",
+    description:
+      "Examine contemporary moral dilemmas through various ethical frameworks and philosophical perspectives.",
+    duration: "8 weeks",
+    level: "Intermediate",
+    rating: 4.6,
+    category: "Philosophy",
+  },
+  {
+    id: 6,
+    title: "Classical Literature",
+    description:
+      "Read and analyze foundational texts from Homer, Virgil, Ovid, and other classical authors that shaped Western literature.",
+    duration: "10 weeks",
+    level: "Intermediate",
+    rating: 4.8,
+    category: "Literature",
+  },
+];
+
+        // Always show all courses
+        const $cards = document.getElementById('cards');
+        const $search = document.getElementById('searchInput');
+        const $category = document.getElementById('categorySelect');
+        const $duration = document.getElementById('durationSelect');
+        const $level = document.getElementById('levelSelect');
+        const $resultsCount = document.getElementById('resultsCount');
+        const $queryHighlight = document.getElementById('queryHighlight');
+        const $loadMore = document.getElementById('loadMoreBtn');
+
+        function matches(course, q, cat, dur, lvl) {
+          const text = (course.title + ' ' + course.description + ' ' + course.category).toLowerCase();
+          if (q && !text.includes(q.toLowerCase())) return false;
+          if (cat && cat !== 'All Categories' && course.category !== cat) return false;
+          if (dur && dur !== 'Any Duration' && course.duration !== dur) return false;
+          if (lvl && lvl !== 'All Levels' && course.level !== lvl) return false;
+          return true;
+        }
+
+        function render() {
+          const q = $search.value.trim();
+          const cat = $category.value;
+          const dur = $duration.value;
+          const lvl = $level.value;
+
+          const filtered = courses.filter((c) => matches(c, q, cat, dur, lvl));
+          $resultsCount.textContent = 'Found ' + filtered.length;
+          $queryHighlight.textContent = '"' + (q || '') + '"';
+
+          // Show all filtered courses without slicing
+          const toShow = filtered;
+
+          $cards.innerHTML = toShow.map((course, index) => {
+            return `
+              <article class="group relative flex flex-col overflow-hidden rounded-2xl bg-gradient-to-br from-[#1e293b] to-[#0f172a] border border-white/10 transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-blue-500/30 cursor-pointer animate-fade-in-up" style="animation-delay:${index*0.06}s">
+                <div class="absolute inset-0 rounded-2xl bg-gradient-to-br from-blue-500/20 via-transparent to-cyan-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                <header class="relative space-y-4 p-6 pb-4 z-10">
+                  <div class="inline-block rounded-lg bg-gradient-to-r from-blue-500 to-cyan-500 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-white shadow-lg">${course.category}</div>
+                  <h2 class="text-balance font-sans text-xl font-bold leading-tight text-foreground">${course.title}</h2>
+                  <p class="text-pretty font-body text-sm leading-relaxed text-muted-foreground line-clamp-3">${course.description}</p>
+                </header>
+                <div class="relative mt-auto pt-4 border-t border-white/10 z-10 p-6">
+                  <div class="flex items-center gap-4 text-sm font-medium">
+                    <div class="flex items-center gap-2 text-muted-foreground">⏱ ${course.duration}</div>
+                    <div class="flex items-center gap-2 text-muted-foreground">📊 ${course.level}</div>
+                    <div class="flex items-center gap-2 ml-auto">⭐ <span class="font-bold text-foreground">${course.rating}</span></div>
+                  </div>
+                </div>
+              </article>
+            `;
+          }).join('');
+
+          // Show or hide Load More
+          $loadMore.style.display = filtered.length > visibleCourses ? 'inline-block' : 'none';
+        }
+
+        $search.addEventListener('input', render);
+        $category.addEventListener('change', render);
+        $duration.addEventListener('change', render);
+        $level.addEventListener('change', render);
+
+        // Load More button is just a placeholder now
+        $loadMore.addEventListener('click', () => {
+          $loadMore.classList.add('opacity-80');
+          setTimeout(()=>$loadMore.classList.remove('opacity-80'),200);
+        });
+
+        // initial render
+        render();
+      })();
+    </script>
+  </body>
+</html>
