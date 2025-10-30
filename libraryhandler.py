@@ -7,7 +7,10 @@ async def search_books(user_query):
     formatted = json.loads(text)
     book_list = []
 
-    for book in formatted["docs"]:
+    for i, book in enumerate(formatted["docs"]):
+        if i >= 10:
+            break
+
         print(book)
         title = book["title"]
         key = book['key']
@@ -24,7 +27,7 @@ async def search_books(user_query):
 
     #print(book_list)
 
-    return json.dumps(book_list)
+    return book_list
 
 
 #search_books("python data structures")

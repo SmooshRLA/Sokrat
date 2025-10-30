@@ -1,9 +1,10 @@
 from pydantic import BaseModel, ValidationError
-from youtubesearchpython import VideosSearch, Transcript
+from youtubesearchpython.__future__ import VideosSearch, Transcript
 from dotenv import load_dotenv
 from openai import OpenAI
 import json
 import os
+import random
 
 load_dotenv()
 
@@ -43,7 +44,8 @@ class QuestionList(BaseModel):
     questions: list[Question]
 
 def create_questions(transcript):
-    if not transcript: return
+    if not transcript:
+        return
 
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
@@ -61,20 +63,25 @@ def create_questions(transcript):
     print(validated)
 
     parsed_content = json.loads(response_content)
+    # Shuffle answers for each question so correct answer is not always first
+    if 'questions' in parsed_content:
+        for q in parsed_content['questions']:
+            if 'answers' in q:
+                random.shuffle(q['answers'])
     return parsed_content
 
-def extract_transcript(video_ID):
+async def extract_transcript(video_ID):
     transcript_string = ""
     
     try:
         URL = f"https://www.youtube.com/watch?v={video_ID}"
-        transcript = Transcript.get(URL)
+        transcript = await Transcript.get(URL)
 
         for segment in transcript["segments"]:
             transcript_string += segment["text"]
             transcript_string += " "
-    except:
-        print("An error occurred. Could not extract transcript.")
+    except Exception as e:
+        print(f"An error occurred. Could not extract transcript: {e}")
 
     return transcript_string
 
@@ -82,15 +89,35 @@ async def search_video(user_query, limit):
     vidoes_search = VideosSearch(user_query, limit = limit)
 
     # Example JSON output: https://pypi.org/project/youtube-search-python/
-    return vidoes_search.result()
+    try:
+        result = await vidoes_search.next()
+        return result.get("result", []) if isinstance(result, dict) else []
+    except Exception as e:
+        print(f"An error occurred during video search: {e}")
+        return []
 
-def get_video_questions(video_ID):
+async def get_video_questions(video_ID):
     # extract_transcript can and **will** fail like 50/50 idk why 
     # handle that as you wish
-    transcript = extract_transcript(video_ID)
-    if transcript:
-        print("oi oi")
-        return create_questions(transcript)
+    print(f"get_video_questions called for video_ID={video_ID}", flush=True)
+    try:
+        transcript = await extract_transcript(video_ID)
+        print(f"Transcript: {transcript[:100] if transcript else 'None'}", flush=True)
+        if transcript:
+            print("oi oi", flush=True)
+            questions = create_questions(transcript)
+            print(f"Questions generated: {questions}", flush=True)
+            if questions and 'questions' in questions and len(questions['questions']) > 0:
+                return questions
+            else:
+                print("No questions generated or empty questions list.", flush=True)
+                return {"questions": []}
+        else:
+            print("Transcript extraction failed or empty.", flush=True)
+            return {"questions": []}
+    except Exception as e:
+        print(f"Error in get_video_questions: {e}", flush=True)
+        return {"questions": []}
  
 """
 def test():

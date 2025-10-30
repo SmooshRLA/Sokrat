@@ -18,21 +18,22 @@ class Course(BaseModel):
 
 LLM_INSRUCTION = "Extract the course's name, difficulty, length, and key skills learned from the content. For key skills, summarize them in a short paragraph. If the course is relevant to the user's query which is: {query} mark it as such."
 
-UNDETECTED_ADAPTER = UndetectedAdapter()
-BROWSER_CONFIG = BrowserConfig(
-    enable_stealth = True,
-    headless = False,
-    verbose = True,
-    viewport_width=1980,
-    viewport_height=1080,
-    text_mode = True,
-    light_mode = True
-)
-
-CRAWLER_STRATEGY = AsyncPlaywrightCrawlerStrategy(
-    browser_config = BROWSER_CONFIG,
-    browser_adapter = UNDETECTED_ADAPTER
-)
+def get_browser_config_and_strategy():
+    undetected_adapter = UndetectedAdapter()
+    browser_config = BrowserConfig(
+        enable_stealth = True,
+        headless = False,
+        verbose = True,
+        viewport_width=1980,
+        viewport_height=1080,
+        text_mode = True,
+        light_mode = True
+    )
+    crawler_strategy = AsyncPlaywrightCrawlerStrategy(
+        browser_config = browser_config,
+        browser_adapter = undetected_adapter
+    )
+    return browser_config, crawler_strategy
 # https://www.coursera.org/learn/data-structures
 QUERY_CSS_SELECTOR = ".cds-ProductCard-gridCard, .card__more"
 COURSE_CSS_SELECTOR = ".css-oe48t8, .l-card__info-wrapper, .l-info__inner" #.cds-ProductCard-gridCard, .css-oe48t8
@@ -50,76 +51,132 @@ MD_GENERATOR = DefaultMarkdownGenerator(
 # NOTE: Alison so friggin ahhhhh rn idk if this problem is going to persist or not.
 
 async def scrape_course_pages(url_list, user_query):
-    if not url_list: return 
+    try:
+        if not url_list:
+            return []
 
-    llm_strategy = LLMExtractionStrategy(
-        llm_config = LLMConfig(provider = "deepseek/deepseek-chat", api_token = os.getenv("DEEPSEEK_API_KEY")),
-        schema = Course.model_json_schema(),
-        extraction_type = "schema",
-        instruction = LLM_INSRUCTION.format(query = user_query),
-        #chunk_token_threshold = 1000,
-        #overlap_rate = 0,
-        apply_chunking = False,
-        input_format = "markdown"
-    )
+        llm_strategy = LLMExtractionStrategy(
+            llm_config = LLMConfig(provider = "deepseek/deepseek-chat", api_token = os.getenv("DEEPSEEK_API_KEY")),
+            schema = Course.model_json_schema(),
+            extraction_type = "schema",
+            instruction = LLM_INSRUCTION.format(query = user_query),
+            apply_chunking = False,
+            input_format = "markdown"
+        )
 
-    CRAWL_CONFIG = CrawlerRunConfig(
-        extraction_strategy = llm_strategy,
-        stream = False,
-        cache_mode = CacheMode.BYPASS,
-        css_selector = COURSE_CSS_SELECTOR,
-        markdown_generator = MD_GENERATOR,
-    )
+        browser_config, crawler_strategy = get_browser_config_and_strategy()
+        CRAWL_CONFIG = CrawlerRunConfig(
+            extraction_strategy = llm_strategy,
+            stream = False,
+            cache_mode = CacheMode.BYPASS,
+            css_selector = COURSE_CSS_SELECTOR,
+            markdown_generator = MD_GENERATOR,
+        )
 
-    crawler = AsyncWebCrawler(config = BROWSER_CONFIG, crawler_strategy = CRAWLER_STRATEGY)
-    await crawler.start()
+        crawler = AsyncWebCrawler(config = browser_config, crawler_strategy = crawler_strategy)
+        await crawler.start()
 
-    tasks = [crawler.arun(url = course_URL, config = CRAWL_CONFIG) for course_URL in url_list]
-    results = await asyncio.gather(*tasks)
+        tasks = [crawler.arun(url = course_URL, config = CRAWL_CONFIG) for course_URL in url_list]
+        results = await asyncio.gather(*tasks)
 
-    info_list = []
-    for result in results:
-        if result.success:
-            data = json.loads(result.extracted_content)
-            info_list.append(data)
-            print(data)
+        import ast
+        info_list = []
+        for idx, result in enumerate(results):
+            if result.success:
+                print('Extracted course:', result.extracted_content)
+                course = result.extracted_content
+                course_url = url_list[idx] if idx < len(url_list) else None
+                if isinstance(course, str):
+                    try:
+                        parsed = json.loads(course)
+                    except Exception:
+                        try:
+                            parsed = ast.literal_eval(course)
+                        except Exception:
+                            parsed = None
+                    if isinstance(parsed, dict):
+                        course = parsed
+                    elif isinstance(parsed, list):
+                        for item in parsed:
+                            if isinstance(item, dict):
+                                info_list.append({
+                                    'name': item.get('name', 'N/A'),
+                                    'difficulty': item.get('difficulty', 'N/A'),
+                                    'length': item.get('length', 'N/A'),
+                                    'skills': item.get('skills', 'N/A'),
+                                    'relevant': item.get('relevant', False),
+                                    'link': course_url
+                                })
+                        continue
+                    elif parsed is not None:
+                        course = parsed
+                    else:
+                        info_list.append({
+                            'name': course,
+                            'difficulty': 'N/A',
+                            'length': 'N/A',
+                            'skills': 'N/A',
+                            'relevant': False,
+                            'link': course_url
+                        })
+                        continue
+                if isinstance(course, dict):
+                    info_list.append({
+                        'name': course.get('name', 'N/A'),
+                        'difficulty': course.get('difficulty', 'N/A'),
+                        'length': course.get('length', 'N/A'),
+                        'skills': course.get('skills', 'N/A'),
+                        'relevant': course.get('relevant', False),
+                        'link': course_url
+                    })
 
-    await crawler.close()
-
-    return info_list
+        await crawler.close()
+        return info_list
+    except Exception as e:
+        print(f"Error in scrape_course_pages: {e}")
+        return []
 
 async def scrape_query_pages(user_query):
-    URL_FILTER = URLPatternFilter(patterns = ["*/learn/*", "*/course/*"]) # this was declared earlier but idk im too scared to remove ts
-    BFS_CRAWL_STRATEGY = BFSDeepCrawlStrategy(
-        max_depth = 1,
-        include_external = False,
-        max_pages = 7,
-        filter_chain = FilterChain([URL_FILTER])
-    )
+    try:
 
-    CRAWL_CONFIG = CrawlerRunConfig(
-        deep_crawl_strategy = BFS_CRAWL_STRATEGY,
-        stream = False,
-        cache_mode = CacheMode.BYPASS,
-        css_selector = QUERY_CSS_SELECTOR,
-        markdown_generator = MD_GENERATOR,
-    )
+        browser_config, crawler_strategy = get_browser_config_and_strategy()
+        URL_FILTER = URLPatternFilter(patterns = ["*/learn/*", "*/course/*"]) # this was declared earlier but idk im too scared to remove ts
+        BFS_CRAWL_STRATEGY = BFSDeepCrawlStrategy(
+            max_depth = 1,
+            include_external = False,
+            max_pages = 5,
+            filter_chain = FilterChain([URL_FILTER])
+        )
 
-    course_URLS = []
-    crawler = AsyncWebCrawler(config = BROWSER_CONFIG, crawler_strategy = CRAWLER_STRATEGY)
-    await crawler.start()
+        CRAWL_CONFIG = CrawlerRunConfig(
+            deep_crawl_strategy = BFS_CRAWL_STRATEGY,
+            stream = False,
+            cache_mode = CacheMode.BYPASS,
+            css_selector = QUERY_CSS_SELECTOR,
+            markdown_generator = MD_GENERATOR,
+        )
 
-    tasks = [crawler.arun(url = URL.format(query = user_query), config = CRAWL_CONFIG) for URL in URLS]
-    all_results = await asyncio.gather(*tasks)
+        course_URLS = []
+        crawler = AsyncWebCrawler(config = browser_config, crawler_strategy = crawler_strategy)
+        await crawler.start()
 
-    for site_result_list in all_results:
-        for result in site_result_list:
-            if result.success:
-                course_URLS.append(result.url)
+        tasks = [crawler.arun(url = URL.format(query = user_query), config = CRAWL_CONFIG) for URL in URLS]
+        all_results = await asyncio.gather(*tasks)
 
-    await crawler.close()
-    await scrape_course_pages(course_URLS, user_query)
+        for site_result_list in all_results:
+            for result in site_result_list:
+                if result.success:
+                    course_URLS.append(result.url)
+
+        await crawler.close()
+        return await scrape_course_pages(course_URLS, user_query)
+    except Exception as e:
+        print(f"Error in scrape_query_pages: {e}")
+        return []
  
+async def test():
+    return "hello"
+
 #if __name__ == "__main__":
 #    load_dotenv()
 #    asyncio.run(scrape_query_pages("algorithms"))

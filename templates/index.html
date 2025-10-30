@@ -1,18 +1,665 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /> 
-    <!-- line above is for mobile devices -->
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>sokrat</title>
-    
-  </head>
-  <body>
-    <form action="/search" method="post">
-      <input type="text" name="query" placeholder="Search..." required>
-      <button type="submit">Search</button>
-    </form>
-  </body>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sokrat</title>
+    <style>
+        /* Combined CSS from index.css and App.css (because, yes) */
+        :root {
+            font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+            line-height: 1.5;
+            font-weight: 400;
+            color-scheme: light dark;
+            font-synthesis: none;
+            text-rendering: optimizeLegibility;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        body {
+            background: linear-gradient(to right, #1c1c1c, #343434);
+            color: white;
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-width: 320px;
+        }
+
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 1rem;
+            box-sizing: border-box;
+            text-align: center;
+        }
+
+        .app-container img {
+            display: block;
+            width: clamp(160px, 60vw, 900px);
+            max-width: 90%;
+            height: auto;
+            max-height: 60vh;
+            margin: 0 auto 2rem auto;
+            object-fit: contain;
+        }
+
+        .search-wrapper {
+            width: 100%;
+            max-width: 500px;
+            justify-content: center;
+            position: relative;
+            display: flex;
+        }
+
+        .search-box {
+            position: relative;
+            width: 100%;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            border-radius: 30px;
+            border: none;
+            background: rgba(255, 255, 255, 0.06);
+            color: white;
+            font-size: 1.05rem;
+            outline: none;
+            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.5);
+            box-sizing: border-box;
+        }
+
+        .suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            margin-top: 0.5rem;
+            background: rgba(10, 10, 10, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 10px;
+            max-height: 260px;
+            overflow-y: auto;
+            z-index: 50;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+            list-style: none;
+            padding: 0;
+        }
+
+        .suggestion-item {
+            padding: 10px 14px;
+            cursor: pointer;
+            color: #eee;
+            font-size: 0.96rem;
+        }
+
+        .suggestion-item:hover,
+        .suggestion-item.active {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .suggestions strong {
+            color: #fff;
+            font-weight: 700;
+        }
+
+        /* Stylish search button */
+        .search-form button[type="submit"] {
+            background-color: #343434;
+            color: #fff;
+            border: none;
+            border-radius: 30px;
+            padding: 0.7rem 2.2rem;
+            font-size: 1.08rem;
+            font-family: 'Segoe UI', sans-serif;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.18);
+            margin-top: 0.5rem;
+            margin-left: 0.7rem;
+            outline: none;
+        }
+
+        /* Loader overlay */
+        .loader-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(30, 30, 30, 0.82);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.2s;
+        }
+        .loader-spinner {
+            border: 6px solid #444;
+            border-top: 6px solid #7aa0c4;
+            border-radius: 50%;
+            width: 54px;
+            height: 54px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 480px) {
+            .app-container img {
+                margin-bottom: 1.5rem;
+                max-width: 90%;
+            }
+
+            .search-input {
+                font-size: 0.9rem;
+                padding: 0.6rem 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+    <img src="{{ url_for('static', filename='images/Sokrat2.png') }}" alt="ballinSoc"/>
+        <div class="search-wrapper">
+            <form id="searchForm" class="search-form search-box" role="search" action="/search" method="post">
+                <input
+                    id="searchInput"
+                    class="search-input"
+                    type="text"
+                    placeholder="Search any topic..."
+                    aria-autocomplete="list"
+                    name="query"
+                    required>
+                <ul id="suggestions" class="suggestions" role="listbox" style="display: none;"></ul>
+                <button type="submit">Search</button>
+            </form>
+        </div>
+        <!-- Loader overlay (hidden by default) -->
+        <div id="loaderOverlay" class="loader-overlay" style="display:none;">
+            <div class="loader-spinner"></div>
+        </div>
+    </div>
+
+    <script>
+
+        // Prevent double form submission and show loader only once
+        let formSubmitted = false;
+        const searchForm = document.getElementById('searchForm');
+        searchForm.addEventListener('submit', function(e) {
+            if (formSubmitted) {
+                e.preventDefault();
+                return false;
+            }
+            // Only submit if form is valid
+            if (searchForm.checkValidity()) {
+                document.getElementById('loaderOverlay').style.display = 'flex';
+                formSubmitted = true;
+            } else {
+                // Let browser show validation errors
+                formSubmitted = false;
+            }
+        });
+
+        // Hide loader if user navigates back (in case page is cached)
+        window.addEventListener('pageshow', function(event) {
+            document.getElementById('loaderOverlay').style.display = 'none';
+            formSubmitted = false;
+        });
+
+        // Topics array from PopularTopics component
+        const topics = [
+            "Quantum Mechanics", "Machine Learning", "Artificial Intelligence", "Deep Learning",
+            "Neural Networks", "Computer Vision", "Natural Language Processing", "Data Science",
+            "Statistics", "Calculus I", "Calculus II", "Linear Algebra", "Differential Equations",
+  "Discrete Mathematics", "Probability Theory", "Numerical Methods", "Combinatorics",
+  "Complex Analysis", "Real Analysis", "Topology", "Set Theory", "Abstract Algebra",
+  "Physics I", "Physics II", "Thermodynamics", "Classical Mechanics", "Electromagnetism",
+  "Quantum Physics", "Relativity", "Astrophysics", "Optics", "Nuclear Physics",
+  "Solid State Physics", "Particle Physics", "Computational Physics", "Biophysics",
+  "Chemistry I", "Organic Chemistry", "Inorganic Chemistry", "Physical Chemistry",
+  "Analytical Chemistry", "Biochemistry", "Molecular Biology", "Genetics",
+  "Microbiology", "Cell Biology", "Evolutionary Biology", "Anatomy", "Physiology",
+  "Neuroscience", "Psychology 101", "Cognitive Psychology", "Social Psychology",
+  "Behavioral Psychology", "Developmental Psychology", "Abnormal Psychology", "Philosophy",
+  "Ethics", "Logic", "Epistemology", "Metaphysics", "Aesthetics", "Political Philosophy",
+  "Sociology", "Cultural Studies", "Anthropology", "Archaeology", "Economics",
+  "Microeconomics", "Macroeconomics", "International Trade", "Economic Policy",
+  "Finance", "Accounting", "Business Administration", "Entrepreneurship", "Marketing",
+  "Human Resource Management", "Operations Management", "Supply Chain Management",
+  "Project Management", "Information Systems", "Management Information Systems",
+  "Computer Science", "Algorithms", "Data Structures", "Operating Systems",
+  "Computer Networks", "Cybersecurity", "Database Systems", "Cloud Computing",
+  "Software Engineering", "Web Development", "Frontend Development", "Backend Development",
+  "Full Stack Development", "Mobile App Development", "Game Development", "AR/VR Development",
+  "Blockchain Technology", "Cryptography", "Quantum Computing", "Computer Graphics",
+  "Human Computer Interaction", "UI/UX Design", "Product Design", "Graphic Design",
+  "Animation", "3D Modeling", "Video Editing", "Digital Photography", "Film Studies",
+  "Music Theory", "Music Production", "Audio Engineering", "Voice Acting",
+  "Creative Writing", "Poetry", "Novel Writing", "Screenwriting", "Journalism",
+  "Literary Analysis", "World Literature", "English Composition", "Linguistics",
+  "History of Europe", "History of Asia", "History of Africa", "History of the Americas",
+  "Ancient Civilizations", "Modern World History", "US History", "World Wars",
+  "Cold War Studies", "Political Science", "International Relations", "Public Policy",
+  "Law", "Constitutional Law", "Criminal Justice", "Forensic Science", "Environmental Science",
+  "Ecology", "Geology", "Oceanography", "Meteorology", "Astronomy", "Climate Science",
+  "Sustainability", "Renewable Energy", "Mechanical Engineering", "Civil Engineering",
+  "Electrical Engineering", "Electronics", "Robotics", "Control Systems",
+  "Aerospace Engineering", "Automotive Engineering", "Biomedical Engineering",
+  "Chemical Engineering", "Industrial Engineering", "Materials Science",
+  "Architecture", "Urban Planning", "Interior Design", "Landscape Architecture",
+  "Education", "Curriculum Design", "Special Education", "Child Development",
+  "Instructional Design", "Pedagogy", "Lifelong Learning", "Public Health",
+  "Epidemiology", "Nutrition", "Healthcare Management", "Nursing", "Medical Terminology",
+  "Pharmacology", "Genomics", "Bioinformatics", "Neurobiology", "Data Analytics",
+  "Business Analytics", "Operations Research", "Financial Mathematics",
+  "Game Theory", "Optimization", "Artificial Life", "Ethical AI",
+  "Digital Humanities", "Cognitive Science", "Cultural Anthropology", "Rhetoric",
+  "Public Speaking", "Technical Writing", "Research Methods", "Critical Thinking",
+  "Library Science", "Information Literacy", "Statistics for Research", "Experimental Design","Computational Linguistics", "Sociolinguistics", "Phonetics", "Morphology", "Syntax", "Semantics",
+  "Pragmatics", "Translation Studies", "Second Language Acquisition", "TESOL",
+  "Education Policy", "Comparative Education", "Adult Education", "STEM Education",
+  "Curriculum Development", "Digital Pedagogy", "Education Technology", "Learning Analytics",
+  "Online Teaching", "Assessment and Evaluation", "Instructional Psychology",
+  "School Administration", "Higher Education Studies", "Organizational Behavior",
+  "Leadership", "Ethical Leadership", "Corporate Governance", "Nonprofit Management",
+  "Public Administration", "Public Finance", "Urban Economics", "Behavioral Economics",
+  "Development Economics", "Game Theory in Economics", "Monetary Economics", "Labor Economics",
+  "Health Economics", "Econometrics", "Environmental Economics", "Data Visualization",
+  "Predictive Modeling", "Time Series Analysis", "Bayesian Statistics", "Statistical Inference",
+  "Regression Analysis", "Sampling Methods", "Survey Design", "Business Statistics",
+  "Demography", "Big Data Analytics", "Data Mining", "Information Retrieval",
+  "Search Algorithms", "Optimization Algorithms", "Parallel Computing", "Distributed Systems",
+  "Operating Systems Security", "Computer Architecture", "Microprocessors", "Embedded Systems",
+  "Digital Logic Design", "VLSI Design", "Signal Processing", "Wireless Communications",
+  "Optical Communications", "Network Security", "Penetration Testing", "Malware Analysis",
+  "Ethical Hacking", "Cloud Security", "Internet of Things (IoT)", "Edge Computing",
+  "5G Technology", "Satellite Communications", "Mobile Network Engineering", "Information Theory",
+  "Quantum Information Science", "Computational Geometry", "Software Testing", "Agile Development",
+  "DevOps", "Continuous Integration", "Version Control Systems", "Git and GitHub",
+  "Software Architecture", "Design Patterns", "API Development", "RESTful APIs",
+  "GraphQL", "Microservices", "Containerization", "Docker", "Kubernetes",
+  "CI/CD Pipelines", "Serverless Computing", "Web Performance Optimization",
+  "Progressive Web Apps", "Accessibility Design", "Responsive Web Design",
+  "Front-End Frameworks", "ReactJS", "VueJS", "Angular", "Svelte", "Next.js", "Tailwind CSS",
+  "Three.js", "Canvas API", "WebGL", "TypeScript", "JavaScript Fundamentals", "Python Programming",
+  "C++ Programming", "Java Programming", "C# Programming", "Rust Programming", "Go Programming",
+  "Swift Programming", "Kotlin Development", "MATLAB", "R Programming", "Julia Programming",
+  "Shell Scripting", "Bash Automation", "Linux System Administration", "Windows Server",
+  "Computer Hardware", "PC Building", "Microcontrollers", "Raspberry Pi", "Arduino Programming",
+  "FPGA Programming", "IoT Prototyping", "Sensor Technology", "Smart Devices", "Human Factors Engineering",
+  "Ergonomics", "Industrial Design", "Product Manufacturing", "3D Printing", "Additive Manufacturing",
+  "Mechanical Design", "Finite Element Analysis", "Structural Engineering", "Fluid Mechanics",
+  "Heat Transfer", "Dynamics", "Statics", "Vibration Analysis", "Control Theory", "Automation Systems",
+  "Mechatronics", "Power Electronics", "Renewable Energy Systems", "Solar Energy Engineering",
+  "Wind Energy Systems", "Hydropower Systems", "Geothermal Energy", "Nuclear Engineering",
+  "Thermal Systems", "Energy Storage Systems", "Battery Technology", "Fuel Cells",
+  "Smart Grid Technology", "Transportation Engineering", "Traffic Flow Theory",
+  "Highway Design", "Railway Engineering", "Water Resources Engineering", "Environmental Engineering",
+  "Waste Management", "Air Pollution Control", "Hydrology", "Geotechnical Engineering",
+  "Earthquake Engineering", "Sustainable Design", "Green Building", "Architectural Drawing",
+  "Architectural History", "Building Materials", "Construction Management", "Project Estimation",
+  "Interior Lighting Design", "Furniture Design", "Landscape Ecology", "Urban Sociology",
+  "Urban Geography", "Regional Planning", "GIS Fundamentals", "Remote Sensing", "Cartography",
+  "Spatial Analysis", "Geospatial Data Science", "Climate Modeling", "Environmental Policy",
+  "Natural Resource Management", "Biodiversity Conservation", "Wildlife Management",
+  "Forest Ecology", "Marine Biology", "Zoology", "Botany", "Plant Physiology",
+  "Environmental Chemistry", "Toxicology", "Agricultural Science", "Soil Science",
+  "Food Science", "Nutrition Science", "Food Technology", "Public Health Nutrition",
+  "Sports Science", "Kinesiology", "Exercise Physiology", "Biomechanics", "Physical Education",
+  "Sports Coaching", "Sports Management", "Sports Psychology", "Rehabilitation Science",
+  "Occupational Therapy", "Physical Therapy", "Speech Pathology", "Audiology", "Medical Imaging",
+  "Radiology", "Pathophysiology", "Immunology", "Endocrinology", "Cardiology", "Oncology",
+  "Dermatology", "Pediatrics", "Geriatrics", "Obstetrics and Gynecology", "Surgery", "Anesthesiology",
+  "Emergency Medicine", "Pharmacognosy", "Toxicology", "Medicinal Chemistry", "Clinical Trials",
+  "Epidemiological Methods", "Global Health", "Infectious Diseases", "Epidemic Modeling",
+  "Vaccinology", "Bioethics", "Medical Law", "Health Informatics", "Telemedicine", "Hospital Management",
+  "Supply Chain in Healthcare", "Pharmaceutical Management", "Behavioral Science", "Cognitive Neuroscience",
+  "Brain-Computer Interfaces", "Computational Neuroscience", "Neuroimaging", "Artificial Consciousness",
+  "Affective Computing", "Human-Robot Interaction", "Autonomous Systems", "Drone Engineering",
+  "Aerospace Materials", "Orbital Mechanics", "Rocket Propulsion", "Spacecraft Design",
+  "Satellite Engineering", "Astrobiology", "Exoplanetary Science", "Cosmology", "Galactic Astronomy",
+  "Stellar Physics", "Observational Astronomy", "Radio Astronomy", "High-Energy Astrophysics",
+  "Gravitational Waves", "Dark Matter and Dark Energy", "Quantum Field Theory", "String Theory",
+  "Condensed Matter Physics", "Nanotechnology", "Nanomaterials", "Quantum Optics", "Photonic Systems",
+  "Lasers and Applications", "Optoelectronics", "Holography", "Acoustics", "Wave Mechanics",
+  "Mathematical Physics", "Computational Chemistry", "Quantum Chemistry", "Surface Chemistry",
+  "Catalysis", "Industrial Chemistry", "Polymers", "Ceramic Engineering", "Corrosion Science",
+  "Materials Characterization", "Crystal Structures", "Thermodynamic Systems", "Process Engineering",
+  "Chemical Process Design", "Bioprocess Engineering", "Fermentation Technology", "Metallurgy",
+  "Mining Engineering", "Petroleum Engineering", "Energy Economics", "Sustainability Management",
+  "Environmental Ethics", "Corporate Sustainability", "Circular Economy", "Climate Policy",
+  "Global Politics", "Comparative Politics", "Political Theory", "International Organizations",
+  "Diplomacy", "Peace Studies", "Conflict Resolution", "Terrorism Studies", "Security Studies",
+  "Human Rights", "Public International Law", "Constitutional Design", "Administrative Law",
+  "Intellectual Property Law", "Contract Law", "Tort Law", "Criminal Law", "Evidence Law",
+  "Legal Writing", "Legal Research", "Judicial Process", "Legislative Studies", "Civic Education",
+  "Government Systems", "Public Speaking for Politics", "Rhetoric and Persuasion",
+  "Philosophy of Science", "Philosophy of Mind", "Philosophy of Religion",
+  "Existentialism", "Phenomenology", "Marxist Theory", "Feminist Philosophy",
+  "Ethics in Technology", "Bioethics in AI", "History of Philosophy", "Ancient Philosophy",
+  "Medieval Philosophy", "Modern Philosophy", "Contemporary Thought", "Cognitive Science",
+  "Linguistic Anthropology", "Social Anthropology", "Visual Anthropology", "Human Evolution",
+  "Cultural Heritage", "Museum Studies", "Art History", "Modern Art", "Renaissance Art",
+  "Baroque Art", "Contemporary Art", "Art Criticism", "Aesthetics and Design", "Art Therapy",
+  "Color Theory", "Typography", "Visual Communication", "Photography", "Cinematography",
+  "Film Production", "Screen Direction", "Editing Techniques", "Documentary Filmmaking",
+  "Sound Design", "Acting Techniques", "Stagecraft", "Theater History", "Drama Analysis",
+  "Performing Arts Management", "Dance Theory", "Choreography", "Music History", "Ethnomusicology",
+  "Music Composition", "Orchestration", "Conducting", "Digital Music Production",
+  "Audio Mixing and Mastering", "Podcast Production", "Broadcast Journalism",
+  "Investigative Journalism", "Media Ethics", "Communication Theory", "Mass Media Studies",
+  "Public Relations", "Advertising", "Brand Strategy", "Consumer Psychology", "Digital Marketing",
+  "SEO Optimization", "Content Strategy", "Social Media Management", "Influencer Marketing",
+  "Visual Marketing", "Market Research", "E-commerce Management", "Entrepreneurial Finance",
+  "Startup Strategy", "Innovation Management", "Product Lifecycle Management",
+  "Venture Capital", "Financial Modeling", "Investment Banking", "Portfolio Management",
+  "Behavioral Finance", "Risk Management", "Insurance Principles", "Corporate Finance",
+  "Macroeconomic Policy", "Fiscal Policy", "International Business", "Cross-Cultural Management",
+  "Global Supply Chains", "Logistics", "Import Export Management", "Maritime Economics",
+  "Tourism Management", "Hospitality Management", "Event Planning", "Culinary Science",
+  "Gastronomy", "Food Safety", "Restaurant Management", "Wine Studies", "Baking Science",
+  "Pastry Arts", "Nutrition and Dietetics", "Food Sustainability", "Agricultural Economics",
+  "Rural Development", "Agroecology", "Forestry", "Fisheries Science", "Wildlife Conservation",
+  "Marine Policy", "Ocean Conservation", "Environmental Law", "Climate Justice",
+  "Sociology of Education", "Sociology of Health", "Urban Sociology", "Rural Sociology",
+  "Gender Studies", "Queer Theory", "Race and Ethnicity Studies", "Criminology",
+  "Deviance Studies", "Social Work", "Community Development", "Human Development",
+  "Global Studies", "Peacebuilding", "Migration Studies", "Democracy Studies",
+  "Civic Technology", "Digital Citizenship", "Internet Governance", "Media Literacy",
+  "Digital Ethics", "Cyber Law", "Blockchain Law", "Intellectual Property in Technology",
+  "Software Licensing", "Open Source Ecosystems", "AI Governance", "Algorithmic Bias",
+  "Data Privacy", "Cyber Policy", "Digital Sociology", "Technological History",
+  "History of Computing", "History of Mathematics", "History of Physics",
+  "Industrial Revolution", "Scientific Revolution", "Enlightenment Era", "Space Race",
+  "Cold War Science", "Modern Engineering Innovations", "Future Technologies",
+  "STEM Education Policy", "AI in Education", "Virtual Learning Environments",
+  "Game-Based Learning", "Simulation Design", "Educational Psychology", "Learning Theories",
+  "Cognitive Load Theory", "Motivation in Learning", "Assessment Technology", "Educational Research",
+  "Instructional Technology", "Adaptive Learning Systems", "Curriculum Innovation", "Teacher Training",
+  "Lifelong Education", "Adult Learning Theories", "Career Development", "Digital Portfolio Building",
+  "Academic Writing", "Grant Writing", "Thesis Research", "Scientific Communication",
+  "Peer Review Process", "Publishing Ethics", "Research Data Management", "Open Science",
+  "Bibliometrics", "Knowledge Management", "Innovation Ecosystems", "Technology Transfer",
+  "Entrepreneurship in Science", "STEM Policy", "Science Diplomacy", "Global Innovation Networks",
+  "Space Policy", "Energy Policy", "Artificial General Intelligence", "Human Enhancement",
+  "Transhumanism", "Ethics of Robotics", "Science Communication", "Public Understanding of Science",
+  "STEM Outreach", "Women in STEM", "Education Equity", "Inclusive Design", "AI for Beginners", "3D Animation", "Public Speaking for Professionals", "Data Engineering",
+  "Photography Masterclass", "Digital Painting", "Creative Coding", "Ethical Hacking Basics",
+  "Piano for Beginners", "Guitar Techniques", "Music Production in FL Studio",
+  "Singing Techniques", "Voice Training", "Acting for Film", "Directing for Stage and Screen",
+  "Screenwriting for Beginners", "Film Editing in Premiere Pro", "After Effects Essentials",
+  "Motion Graphics", "Adobe Photoshop", "Adobe Illustrator", "Adobe InDesign",
+  "Procreate Illustration", "Logo Design", "Brand Identity Design", "UX Research Fundamentals",
+  "Usability Testing", "Figma Prototyping", "Sketch App Design", "Webflow for Designers",
+  "Shopify Development", "WordPress Development", "SEO Fundamentals", "Affiliate Marketing",
+  "Google Ads", "Facebook Marketing", "TikTok Strategy", "Social Media Growth",
+  "YouTube Branding", "Content Marketing", "Copywriting", "Email Marketing", "Sales Funnels",
+  "E-commerce Analytics", "Dropshipping", "Amazon FBA", "Small Business Accounting",
+  "Freelancing Strategies", "Remote Work Productivity", "Digital Nomad Lifestyle",
+  "Career Planning", "Resume Writing", "Interview Preparation", "Negotiation Skills",
+  "Time Management", "Leadership and Influence", "Conflict Resolution", "Team Collaboration",
+  "Emotional Intelligence", "Mindfulness Meditation", "Stress Management", "Work-Life Balance",
+  "Self-Discipline", "Confidence Building", "Creative Thinking", "Decision Making",
+  "Problem Solving", "Critical Thinking", "Personal Finance", "Investing for Beginners",
+  "Cryptocurrency Basics", "Stock Market Investing", "Real Estate Fundamentals",
+  "Retirement Planning", "Tax Planning", "Financial Literacy", "Accounting with Excel",
+  "Excel Formulas", "Google Sheets", "Power BI", "Tableau Dashboards", "Data Cleaning with Python",
+  "Python for Finance", "SQL for Data Analysis", "MongoDB Basics", "NoSQL Databases",
+  "API Integration", "REST API Design", "Web Scraping", "Automation with Python",
+  "ChatGPT Prompt Engineering", "LLM Fine-Tuning", "TensorFlow for AI", "PyTorch Deep Learning",
+  "Reinforcement Learning", "AI Ethics", "Robotics Programming", "ROS Basics", "Drone Programming",
+  "IoT with Arduino", "IoT with Raspberry Pi", "Cloud Fundamentals", "AWS Cloud Practitioner",
+  "Microsoft Azure Basics", "Google Cloud Fundamentals", "DevOps Foundations",
+  "Terraform Basics", "Docker Essentials", "Kubernetes Administration", "Linux Terminal Mastery",
+  "Shell Scripting for DevOps", "Git for Developers", "GitHub Projects", "Jenkins Automation",
+  "CI/CD Fundamentals", "Agile Methodologies", "Scrum Master Certification", "Kanban Productivity",
+  "Project Management Professional (PMP)", "Prince2 Certification", "Business Process Modeling",
+  "Lean Six Sigma", "Operational Excellence", "Quality Management", "Supply Chain Logistics",
+  "Procurement Management", "Risk Assessment", "Strategic Planning", "Entrepreneurial Mindset",
+  "Startup Growth Hacking", "Innovation Thinking", "Design Thinking", "Customer Experience Design",
+  "Product Roadmaps", "Agile UX", "Lean Startup", "Business Analytics with Excel",
+  "Predictive Analytics", "Financial Forecasting", "Business Intelligence", "Market Analysis",
+  "Consumer Behavior", "Retail Management", "Hospitality Management", "Tourism Marketing",
+  "Event Coordination", "Wedding Planning", "Interior Decoration", "Fashion Design",
+  "Textile Design", "Jewelry Design", "Sustainable Fashion", "Fashion Photography",
+  "Styling and Wardrobe Design", "Makeup Artistry", "Hairstyling", "Nail Art", "Skincare Science",
+  "Cosmetic Chemistry", "Dermatology Essentials", "Massage Therapy", "Yoga Teacher Training",
+  "Pilates Fundamentals", "Fitness Coaching", "Bodybuilding Science", "Sports Nutrition",
+  "Sports Psychology", "Running Technique", "Cycling Training", "Swimming Lessons",
+  "Martial Arts", "Self Defense", "Boxing Fitness", "Kickboxing", "Karate", "Taekwondo",
+  "Jiu-Jitsu", "Parkour", "Climbing Techniques", "Outdoor Survival Skills", "Camping Essentials",
+  "Wilderness Medicine", "First Aid and CPR", "Fire Safety Training", "Disaster Preparedness",
+  "Emergency Management", "Aviation Fundamentals", "Flight Simulation", "Aerodynamics Basics",
+  "Pilot Ground School", "Drone Photography", "Drone Regulations", "Space Exploration",
+  "Astronaut Training", "Telescope Operation", "Astrophotography", "Meteorology Basics",
+  "Weather Forecasting", "Geographic Information Systems (GIS)", "Remote Sensing with QGIS",
+  "Cartographic Design", "Geopolitics", "Environmental Activism", "Climate Change Policy",
+  "Renewable Energy Design", "Solar Panel Installation", "Wind Turbine Systems",
+  "Sustainable Architecture", "Passive House Design", "Eco-Engineering", "Zero Waste Design",
+  "Circular Economy Systems", "Composting", "Urban Farming", "Hydroponics", "Permaculture",
+  "Aquaponics", "Food Preservation", "Baking and Pastry", "Culinary Arts", "Vegan Cooking",
+  "Healthy Meal Prep", "Knife Skills", "World Cuisines", "Japanese Cooking", "Indian Spices",
+  "Italian Pasta Making", "French Pastry", "Chocolate Making", "Coffee Brewing",
+  "Barista Training", "Mixology", "Wine Tasting", "Beer Brewing", "Fermentation Science",
+  "Nutrition and Wellness", "Dietetics", "Public Health", "Epidemiology for Beginners",
+  "Healthcare Administration", "Telehealth Management", "Health Informatics Basics",
+  "Pharmaceutical Technology", "Laboratory Safety", "Forensic Investigation",
+  "Criminal Profiling", "Cybercrime Investigation", "Digital Forensics", "Network Security",
+  "Incident Response", "Data Encryption", "Penetration Testing Advanced", "Reverse Engineering",
+  "Malware Detection", "Bug Bounty Training", "Security Operations Center (SOC)", "SIEM Tools",
+  "Zero Trust Security", "Identity Access Management", "Cloud Security Architect",
+  "Compliance and Risk", "GDPR Compliance", "Data Privacy Law", "Ethical Technology",
+  "AI Policy", "Tech Regulation", "Media Literacy", "Fake News Detection",
+  "Fact Checking Skills", "Digital Storytelling", "Podcast Production", "Voiceover Recording",
+  "Audiobook Narration", "Radio Broadcasting", "Media Production", "Sound Engineering",
+  "Lighting Design", "Set Design", "Stage Direction", "Stage Makeup", "Cinematography",
+  "Drone Videography", "Video Color Grading", "Music Video Production", "Short Film Making",
+  "Photography Lighting", "Portrait Photography", "Landscape Photography",
+  "Product Photography", "Macro Photography", "Event Photography", "Photo Editing in Lightroom",
+  "Photojournalism", "Documentary Photography", "Street Photography", "Wildlife Photography",
+  "Underwater Photography", "Travel Photography", "Fashion Photography", "Architectural Photography",
+  "Cultural Anthropology", "World Religions", "Comparative Mythology", "Ancient Languages",
+  "Latin for Beginners", "Greek Language", "Sanskrit Studies", "Hebrew Basics", "Arabic Language",
+  "Mandarin Chinese", "Japanese Language", "Korean Language", "Spanish for Travel",
+  "French Language", "German Language", "Italian Language", "Portuguese Language",
+  "Russian Language", "Hindi Language", "Swahili Language", "American Sign Language",
+  "Linguistics and Phonology", "Accent Training", "Speech Improvement", "Public Debate Skills",
+  "Argumentation", "Philosophy of Art", "Philosophy of Law", "Modern Political Thought",
+  "Ethics and AI", "Existential Literature", "Rhetoric and Persuasion", "Creative Nonfiction",
+  "Journalistic Writing", "Blog Writing", "Travel Writing", "Science Communication",
+  "Technical Documentation", "Grant Proposal Writing", "Research Paper Writing",
+  "Academic Editing", "Publishing Industry", "Self-Publishing on Amazon", "Creative Entrepreneurship",
+  "Book Marketing", "Digital Illustration", "Comics and Storyboarding", "Character Design",
+  "Concept Art", "Game Art", "Environment Art", "Pixel Art", "3D Modeling in Blender",
+  "Texturing and UV Mapping", "Rigging and Animation", "Game Engine Fundamentals",
+  "Unity Development", "Unreal Engine Blueprinting", "Game Physics", "Game Design Theory",
+  "Level Design", "Narrative Design", "AI in Games", "Game Monetization", "Esports Management",
+  "Streaming and Broadcasting", "YouTube Channel Growth", "Twitch Streaming", "Video SEO",
+  "Online Branding", "Influencer Marketing", "Personal Branding", "Portfolio Building",
+  "Digital Resume Design", "LinkedIn Optimization", "Career Networking", "Remote Collaboration Tools",
+  "Slack for Teams", "Notion Productivity", "Obsidian Notes", "Knowledge Management Systems",
+  "Time Blocking", "Goal Setting", "Habit Formation", "Productivity Systems",
+  "Bullet Journaling", "Digital Minimalism", "Personal Knowledge Management (PKM)",
+  "Life Coaching", "Relationship Building", "Parenting Strategies", "Adolescent Psychology",
+  "Elder Care", "Pet Training", "Animal Behavior", "Wildlife Conservation", "Veterinary Science",
+  "Zoological Studies", "Ornithology", "Marine Ecology", "Herpetology", "Entomology",
+  "Plant Identification", "Botanical Illustration", "Landscape Photography", "Nature Sketching",
+  "Bird Watching", "Environmental Photography", "Ecotourism", "Cultural Tourism",
+  "Historical Research", "Genealogy", "Archaeological Methods", "Ancient Artifacts",
+  "Museum Curation", "Cultural Preservation", "World Heritage Sites", "Urban History",
+  "Art Restoration", "Calligraphy", "Typography", "Lettering Art", "Graphic Novels",
+  "Digital Comics", "Cartoon Animation", "Stop Motion Animation", "Puppetry",
+  "Children’s Book Illustration", "Educational Game Design", "Gamification",
+  "E-learning Design", "Online Course Creation", "Instructional Writing",
+  "Teaching Online", "Virtual Reality Design", "Augmented Reality Design",
+  "Metaverse Development", "Blockchain Development", "Smart Contracts",
+  "Cryptocurrency Trading", "Web3 Fundamentals", "Tokenomics", "DAO Governance",
+  "NFT Art", "Digital Collectibles", "Crowdfunding Campaigns", "Venture Creation",
+  "Startup Pitching", "Investor Relations", "Entrepreneurial Finance",
+  "Innovation Strategy", "Tech Startups", "Software Product Management",
+  "Data Product Design", "AI Product Strategy", "Growth Product Management",
+  "Product Marketing", "User Retention", "A/B Testing", "Metrics and Analytics",
+  "Customer Success", "Business Storytelling", "Negotiation for Leaders",
+  "Team Motivation", "Performance Management", "Corporate Culture Design",
+  "Remote Team Leadership", "Change Management", "Crisis Communication",
+  "Strategic Communications", "Media Relations", "Brand Storytelling",
+  "Corporate Social Responsibility", "Nonprofit Fundraising",
+  "Grant Management", "Community Organizing", "Public Service Leadership",
+  "Diplomatic Negotiation", "Humanitarian Aid", "Disaster Relief Logistics",
+  "NGO Management", "Social Entrepreneurship", "Sustainability Leadership",
+  "Ethical Leadership", "Psychological First Aid", "Crisis Counseling",
+  "Therapeutic Communication", "Coaching Psychology", "Behavioral Economics",
+  "Neuroeconomics", "Cognitive Bias Training", "Psychometrics", "Survey Psychology",
+  "Quantitative Research", "Qualitative Research", "Mixed Methods", "Research Ethics",
+  "Academic Presentation", "Poster Design", "Science Fair Projects",
+  "Experimental Physics", "Molecular Dynamics", "Astrochemistry",
+  "Planetary Geology", "Volcanology", "Seismology", "Hydrology", "Glaciology",
+  "Ocean Dynamics", "Marine Robotics", "Space Robotics", "Space Policy",
+  "Satellite Imagery", "Remote Sensing for Agriculture", "Climate Data Analysis",
+  "Meteorological Modeling", "Computational Biology", "Systems Biology",
+  "Metabolomics", "Proteomics", "Genetic Engineering", "CRISPR Technology",
+  "Stem Cell Research", "Tissue Engineering", "Biomedical Devices",
+  "Nanomedicine", "Medical Robotics", "AI in Healthcare", "Wearable Technology",
+  "Bioinformatics Programming", "Medical Imaging AI", "Digital Pathology",
+  "Clinical Data Science", "Pharmacovigilance", "Healthcare Ethics",
+  "Epidemiological Modeling", "Mental Health Studies", "Addiction Counseling",
+  "Sleep Science", "Human Sexuality", "Family Therapy", "Art Therapy",
+  "Music Therapy", "Dance Therapy", "Play Therapy", "Narrative Therapy",
+  "Cognitive Behavioral Therapy", "Mindfulness-Based Stress Reduction",
+  "Positive Psychology", "Motivational Interviewing", "Trauma Recovery",
+  "Grief Counseling", "Neuroplasticity", "Memory Improvement",
+  "Brain Health", "Aging Studies", "Lifespan Development", "Social Gerontology",
+  "Death and Dying", "Ethics of Care", "Hospice Management", "Biomedical Research Methods",
+  "Bioengineering Design", "CAD Fundamentals", "SolidWorks 3D Design",
+  "AutoCAD Architecture", "Fusion 360", "Revit for Architects", "Building Information Modeling (BIM)",
+  "Structural Drafting", "3D Visualization", "Rendering with V-Ray", "Architectural Sketching",
+  "Parametric Design", "Generative Design", "Urban Mobility", "Smart Cities",
+  "Sustainable Infrastructure", "Transportation Planning", "Public Transit Design",
+  "Civil Drafting", "Surveying", "Topographic Mapping", "Construction Safety",
+  "Building Codes", "Real Estate Development", "Property Valuation", "Facility Management",
+  "Maintenance Engineering", "Industrial Automation", "PLC Programming",
+  "SCADA Systems", "Industrial Internet of Things", "Manufacturing Processes",
+  "Machining Fundamentals", "CNC Programming", "Quality Control", "Lean Manufacturing",
+  "Supply Chain Data Analytics", "Warehouse Management", "Inventory Optimization",
+  "Procurement Analytics", "Global Logistics", "Maritime Navigation",
+  "Port Operations", "Customs Compliance", "Aviation Safety", "Airline Management",
+  "Airport Operations", "Tourism Geography", "Travel Writing", "Sustainable Tourism",
+  "Language and Culture", "Cross-Cultural Communication", "Intercultural Competence"
+        ];
+
+    // DOM elements
+    const searchInput = document.getElementById('searchInput');
+    const suggestionsList = document.getElementById('suggestions');
+    let activeIndex = -1;
+
+        // Handle search submission
+        function handleSearch(query) {
+            console.log("test");
+        }
+
+        // Handle input changes and show suggestions
+        searchInput.addEventListener('input', (e) => {
+            const value = e.target.value;
+            
+            if (value.trim().length === 0) {
+                suggestionsList.style.display = 'none';
+                activeIndex = -1;
+                return;
+            }
+
+            const filtered = topics
+                .filter(t => t.toLowerCase().includes(value.toLowerCase()))
+                .slice(0, 8);
+
+            if (filtered.length > 0) {
+                suggestionsList.innerHTML = filtered.map((s, i) => {
+                    const query = value.trim();
+                    const idx = s.toLowerCase().indexOf(query.toLowerCase());
+                    let html = '<li class="suggestion-item" role="option">';
+                    
+                    if (idx >= 0 && query !== "") {
+                        html += s.slice(0, idx) +
+                               '<strong>' + s.slice(idx, idx + query.length) + '</strong>' +
+                               s.slice(idx + query.length);
+                    } else {
+                        html += s;
+                    }
+                    
+                    html += '</li>';
+                    return html;
+                }).join('');
+                
+                suggestionsList.style.display = 'block';
+            } else {
+                suggestionsList.style.display = 'none';
+            }
+        });
+
+        // Handle keyboard navigation
+        searchInput.addEventListener('keydown', (e) => {
+            const suggestions = suggestionsList.getElementsByTagName('li');
+            
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                activeIndex = Math.min(activeIndex + 1, suggestions.length - 1);
+                updateActiveItem(suggestions);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                activeIndex = Math.max(activeIndex - 1, 0);
+                updateActiveItem(suggestions);
+            } else if (e.key === 'Enter') {
+                if (activeIndex >= 0 && suggestions[activeIndex]) {
+                    e.preventDefault();
+                    searchInput.value = suggestions[activeIndex].textContent;
+                    searchForm.submit();
+                }
+            } else if (e.key === 'Escape') {
+                suggestionsList.style.display = 'none';
+                activeIndex = -1;
+            }
+        });
+
+        // Update active suggestion item
+        function updateActiveItem(suggestions) {
+            Array.from(suggestions).forEach((item, index) => {
+                if (index === activeIndex) {
+                    item.classList.add('active');
+                    item.scrollIntoView({ block: 'nearest' });
+                } else {
+                    item.classList.remove('active');
+                }
+            });
+        }
+
+        // Handle suggestion clicks
+        suggestionsList.addEventListener('mousedown', (e) => {
+            if (e.target.closest('.suggestion-item')) {
+                e.preventDefault();
+                searchInput.value = e.target.closest('.suggestion-item').textContent;
+                searchForm.submit();
+            }
+        });
+
+        // Handle form submission
+        searchForm.addEventListener('submit', (e) => {
+            // Allow default form submission to /search
+        });
+
+        // Close suggestions when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!searchForm.contains(e.target)) {
+                suggestionsList.style.display = 'none';
+                activeIndex = -1;
+            }
+        });
+    </script>
+</body>
 </html>

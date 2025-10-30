@@ -2,18 +2,535 @@
 <html lang="en">
   <head>
     <title>Search Results</title>
+    <style>
+      body {
+        background: #232323;
+        color: #f3f3f3;
+        font-family: 'Segoe UI', 'Arial', sans-serif;
+        font-size: 1.08rem;
+        margin: 0;
+        padding: 0;
+        min-height: 100vh;
+        letter-spacing: 0.01em;
+      }
+      h1, h2, h3, h4, h5 {
+        font-family: 'Merriweather', 'Georgia', serif;
+        font-weight: 600;
+        color: #7eb6d7;
+        letter-spacing: 0.01em;
+      }
+      a { color: #4fc3f7; }
+      a:hover { color: #ffd54f; }
+      /* App container for padding */
+      .app-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 2.5rem 1.5rem 2rem 1.5rem;
+      }
+      /* Unified card style for all cards */
+      .yt-card, .book-card, .onet-card, .course-card {
+        background: #181818;
+        border-radius: 8px;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.13);
+        padding: 0.8rem 1.1rem;
+        min-width: 220px;
+        max-width: 340px;
+        flex: 1 1 220px;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        margin-bottom: 0.5rem;
+      }
+      .yt-title, .book-title, .onet-title, .course-title {
+        font-size: 1.08rem;
+        font-weight: 500;
+        margin-bottom: 0.3rem;
+        color: #b0b8c1;
+      }
+      .yt-title a, .book-title a, .onet-title a, .course-title a {
+        color: #b0b8c1;
+        text-decoration: none;
+      }
+      .yt-title a:hover, .book-title a:hover, .onet-title a:hover, .course-title a:hover {
+        color: #7eb6d7;
+        text-decoration: underline;
+      }
+      .yt-channel, .book-authors, .onet-code, .course-meta, .course-skills {
+        font-size: 0.97rem;
+        color: #bdbdbd;
+        margin-bottom: 0.2rem;
+      }
+      .yt-desc {
+        font-size: 0.95rem;
+        color: #aaa;
+      }
+      .course-skills {
+        color: #b2ebf2;
+      }
+      /* Remove previous card title color overrides for full unification */
+    </style>
   </head>
   <body>
-    <h1>Results for "{{ query }}"</h1>
-    <h2>Books</h2>
-    <pre>{{ results.books }}</pre>
-    <h2>O*NET Occupations</h2>
-    <pre>{{ results.onet }}</pre>
-    <h2>YouTube Videos</h2>
-    <pre>{{ results.videos }}</pre>
-    <h2>Courses</h2>
-    <pre>{{ results.courses }}</pre>
-    <h2>Mind Map</h2>
-    <pre>{{ results.mindmap }}</pre>
+    <div class="app-container">
+      <h1>Results for "{{ query }}"</h1>
+      <div class="results-flex-layout">
+      <div class="results-col results-col-left">
+        <h2>Books</h2>
+        <div class="books-container">
+          {% for book in results.books %}
+            <div class="book-card">
+              <div class="book-title">
+                <a href="{{ book.link }}" target="_blank">{{ book.title }}</a>
+              </div>
+              {% if book.authors %}
+                <div class="book-authors">By: {{ book.authors | join(', ') }}</div>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="results-col results-col-center">
+        <h2>YouTube Videos</h2>
+        {% if results.videos and results.videos|length > 0 %}
+          <div class="yt-container">
+            {% for video in results.videos %}
+              <div class="yt-card" onclick="showVideoModal('{{ video.id }}')" style="cursor:pointer;">
+                <div class="yt-title">{{ video.title }}</div>
+                <div class="yt-channel">Channel: {{ video.channel.name }}</div>
+                <div class="yt-desc">{{ video.descriptionSnippet[0].text if video.descriptionSnippet else '' }}</div>
+              </div>
+            {% endfor %}
+          </div>
+          <div id="yt-modal" class="yt-modal" style="display:none;">
+            <div class="yt-modal-content">
+              <span class="yt-modal-close" onclick="closeVideoModal()">&times;</span>
+              <div class="yt-modal-scroll">
+                <iframe id="yt-modal-iframe" width="700" height="400" frameborder="0" allowfullscreen style="border-radius:12px;"></iframe>
+                <div id="yt-questions" style="margin-top:1.5rem;"></div>
+              </div>
+            </div>
+          </div>
+          <style>
+            .yt-modal {
+              display: none;
+              position: fixed;
+              z-index: 1000;
+              left: 0;
+              top: 0;
+              width: 100vw;
+              height: 100vh;
+              background: rgba(0,0,0,0.7);
+            }
+            .yt-modal-content {
+              background: #232323;
+              margin: 5vh auto;
+              padding: 1.5rem 1.5rem 1rem 1.5rem;
+              border-radius: 16px;
+              width: 740px;
+              max-width: 98vw;
+              position: relative;
+              box-shadow: 0 4px 32px rgba(0,0,0,0.4);
+              max-height: 90vh;
+              overflow: hidden;
+            }
+            .yt-modal-scroll {
+              max-height: 70vh;
+              overflow-y: auto;
+            }
+            .yt-modal-close {
+              color: #fff;
+              position: absolute;
+              top: 10px;
+              right: 18px;
+              font-size: 2.2rem;
+              font-weight: bold;
+              cursor: pointer;
+            }
+            @media (max-width: 800px) {
+              .yt-modal-content iframe { width: 98vw !important; height: 40vw !important; }
+              .yt-modal-content { width: 98vw !important; }
+            }
+          </style>
+          <style>
+            .yt-quiz-list { margin-top: 1.2rem; }
+            .yt-quiz-q { margin-bottom: 0.3rem; font-size: 1.08rem; color: #fff; }
+            .yt-quiz-answers { margin-bottom: 1.1rem; }
+            .yt-quiz-answer {
+              margin: 0.18rem 0.5rem 0.18rem 0;
+              padding: 0.45rem 1.1rem;
+              border-radius: 8px;
+              border: none;
+              background: #232323;
+              color: #fff;
+              font-size: 1rem;
+              cursor: pointer;
+              transition: background 0.2s;
+            }
+            .yt-quiz-answer:hover:not(:disabled) {
+              background: #4fc3f7;
+              color: #181818;
+            }
+          </style>
+          <script>
+            function showVideoModal(videoId) {
+              var modal = document.getElementById('yt-modal');
+              var iframe = document.getElementById('yt-modal-iframe');
+              var questionsDiv = document.getElementById('yt-questions');
+              iframe.src = 'https://www.youtube.com/embed/' + videoId + '?autoplay=1';
+              questionsDiv.innerHTML = '<div style="color:#aaa;">Loading questions...</div>';
+              modal.style.display = 'block';
+              fetch('/video_questions/' + videoId)
+                .then(resp => resp.json())
+                .then(data => {
+                  if (!data || !data.questions || data.questions.length === 0) {
+                    questionsDiv.innerHTML = '<div style="color:#aaa;">No questions found for this video.</div>';
+                    return;
+                  }
+                  let html = '<div class="yt-quiz-list">';
+                  data.questions.forEach((q, i) => {
+                    html += `<div class='yt-quiz-q'><b>Q${i+1}:</b> ${q.question_text}</div><div class='yt-quiz-answers'>`;
+                    q.answers.forEach((a, j) => {
+                      html += `<button class='yt-quiz-answer' data-correct='${a.is_correct}' onclick='revealAnswer(this, ${a.is_correct})'>${a.answer_text}</button>`;
+                    });
+                    html += '</div>';
+                  });
+                  html += '</div>';
+                  questionsDiv.innerHTML = html;
+                })
+                .catch(() => {
+                  questionsDiv.innerHTML = '<div style="color:#aaa;">Failed to load questions.</div>';
+                });
+            }
+            function revealAnswer(btn, isCorrect) {
+              const parent = btn.parentElement;
+              Array.from(parent.children).forEach(b => {
+                b.disabled = true;
+                if (b.getAttribute('data-correct') === 'true') {
+                  b.style.background = '#43a047';
+                  b.style.color = '#fff';
+                } else {
+                  b.style.background = '#b71c1c';
+                  b.style.color = '#fff';
+                }
+              });
+              if (isCorrect) {
+                btn.innerHTML += ' <span style="font-size:1.1em;">✔️</span>';
+              } else {
+                btn.innerHTML += ' <span style="font-size:1.1em;">❌</span>';
+              }
+            }
+            function closeVideoModal() {
+              var modal = document.getElementById('yt-modal');
+              var iframe = document.getElementById('yt-modal-iframe');
+              iframe.src = '';
+              modal.style.display = 'none';
+            }
+            window.onclick = function(event) {
+              var modal = document.getElementById('yt-modal');
+              if (event.target == modal) closeVideoModal();
+            }
+          </script>
+        {% else %}
+          <div style="color:#aaa; margin-bottom:2rem;">No YouTube videos found.</div>
+        {% endif %}
+        <h2>Courses</h2>
+        {% if results.courses and results.courses|length > 0 %}
+          <div class="courses-container">
+            {% for course in results.courses %}
+              <div class="course-card">
+                <div class="course-title">
+                  {% if course.link %}
+                    <a href="{{ course.link }}" target="_blank">
+                      {{ course.name if course.name else 'N/A' }}
+                    </a>
+                  {% else %}
+                    {{ course.name if course.name else 'N/A' }}
+                  {% endif %}
+                  {% if course.relevant %}<span title="Relevant" style="color:#e53935;font-size:1.2em;vertical-align:middle;">*</span>{% endif %}
+                </div>
+                <div class="course-meta">
+                  <span class="course-difficulty"><strong>Difficulty:</strong> {{ course.difficulty if course.difficulty else 'N/A' }}</span><br>
+                  <span class="course-length"><strong>Length:</strong> {{ course.length if course.length else 'N/A' }}</span>
+                </div>
+                <div class="course-skills"><strong>Key Skills:</strong> {{ course.skills if course.skills else 'N/A' }}</div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div style="color:#aaa; margin-bottom:2rem;">No courses found.</div>
+        {% endif %}
+        <h2>Mind Map</h2>
+        <div id="mindmap-container" class="mindmap-bg"></div>
+        <script>
+          function renderMindMap(data, containerId) {
+            let width = 900, height = 500;
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            function estimateTextWidth(text, fontSize = 16, font = 'Segoe UI') {
+              return Math.max(40, text.length * fontSize * 0.45);
+            }
+            function assignRadii(node) {
+              const fontSize = 16;
+              node._radius = Math.max(38, Math.min(estimateTextWidth(node.text, fontSize) / 2 + 12, 70));
+              if (node.children) node.children.forEach(assignRadii);
+            }
+            assignRadii(data);
+            function layout(node, depth, x, y, siblings, index) {
+              node._x = x;
+              node._y = y;
+              if (node.children && node.children.length > 0) {
+                const n = node.children.length;
+                let maxChildRadius = Math.max(...node.children.map(c => c._radius));
+                const spread = Math.max(120, 220 / (depth+1), maxChildRadius * 2.1, 90);
+                node.children.forEach((child, i) => {
+                  layout(child, depth+1, x + (i-(n-1)/2)*spread, y+node._radius+maxChildRadius+30, n, i);
+                });
+              }
+            }
+            layout(data, 0, width/2, 60, 1, 0);
+            function collectNodes(node, arr) {
+              arr.push(node);
+              if (node.children) node.children.forEach(child => collectNodes(child, arr));
+            }
+            let allNodes = [];
+            collectNodes(data, allNodes);
+            let maxY = 0;
+            for (let iter = 0; iter < 10; ++iter) {
+              for (let i = 0; i < allNodes.length; ++i) {
+                let a = allNodes[i];
+                maxY = Math.max(maxY, a._y + a._radius);
+                for (let j = i+1; j < allNodes.length; ++j) {
+                  let b = allNodes[j];
+                  let dx = b._x - a._x, dy = b._y - a._y;
+                  let dist = Math.sqrt(dx*dx + dy*dy);
+                  let minDist = a._radius + b._radius + 18;
+                  if (dist < minDist && dist > 0.1) {
+                    let force = (minDist - dist) * 0.7;
+                    let fx = (dx / dist) * force;
+                    let fy = (dy / dist) * force;
+                    b._x += fx/2; a._x -= fx/2;
+                    b._y += fy/2; a._y -= fy/2;
+                  } else if (dist < minDist && dist <= 0.1) {
+                    b._x += 5 + Math.random()*10;
+                    b._y += 5 + Math.random()*10;
+                  }
+                }
+                if (a._x - a._radius < 0) a._x = a._radius + 10;
+                if (a._x + a._radius > width) a._x = width - a._radius - 10;
+                if (a._y - a._radius < 0) a._y = a._radius + 10;
+                if (a._y + a._radius > height) height = a._y + a._radius + 30;
+              }
+            }
+            for (let i = 0; i < allNodes.length; ++i) {
+              let a = allNodes[i];
+              for (let j = i+1; j < allNodes.length; ++j) {
+                let b = allNodes[j];
+                let dx = b._x - a._x, dy = b._y - a._y;
+                let dist = Math.sqrt(dx*dx + dy*dy);
+                let minDist = a._radius + b._radius + 18;
+                if (dist < minDist && dist > 0.1) {
+                  let force = (minDist - dist) * 1.2;
+                  let fx = (dx / dist) * force;
+                  let fy = (dy / dist) * force;
+                  b._x += fx/2; a._x -= fx/2;
+                  b._y += fy/2; a._y -= fy/2;
+                }
+              }
+            }
+            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.setAttribute('width', width);
+            svg.setAttribute('height', height);
+            svg.style.display = 'block';
+            svg.style.margin = '0 auto';
+            container.style.height = height + 'px';
+            container.appendChild(svg);
+            function drawLinks(node) {
+              if (node.children) {
+                node.children.forEach(child => {
+                  const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                  line.setAttribute('x1', node._x);
+                  line.setAttribute('y1', node._y+node._radius/2);
+                  line.setAttribute('x2', child._x);
+                  line.setAttribute('y2', child._y-child._radius/2);
+                  line.setAttribute('stroke', '#4fc3f7');
+                  line.setAttribute('stroke-width', '2');
+                  svg.appendChild(line);
+                  drawLinks(child);
+                });
+              }
+            }
+            drawLinks(data);
+            function wrapText(svgText, text, maxWidth, fontSize) {
+              let words = text.split(' ');
+              let line = '', lines = [];
+              for (let i = 0; i < words.length; ++i) {
+                let testLine = line ? line + ' ' + words[i] : words[i];
+                let estWidth = testLine.length * fontSize * 0.52;
+                if (estWidth > maxWidth && line) {
+                  lines.push(line);
+                  line = words[i];
+                } else {
+                  line = testLine;
+                }
+              }
+              if (line) lines.push(line);
+              let totalHeight = lines.length * fontSize + (lines.length-1)*2;
+              let startDy = -(totalHeight/2) + fontSize/2;
+              lines.forEach((l, idx) => {
+                let tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+                tspan.setAttribute('x', svgText.getAttribute('x'));
+                tspan.setAttribute('dy', idx === 0 ? startDy : fontSize+2);
+                tspan.textContent = l;
+                svgText.appendChild(tspan);
+              });
+            }
+            function drawNodes(node) {
+              const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+              const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+              circle.setAttribute('cx', node._x);
+              circle.setAttribute('cy', node._y);
+              circle.setAttribute('r', node._radius);
+              circle.setAttribute('fill', '#232323');
+              circle.setAttribute('stroke', '#4fc3f7');
+              circle.setAttribute('stroke-width', '3');
+              g.appendChild(circle);
+              const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+              text.setAttribute('x', node._x);
+              text.setAttribute('y', node._y);
+              text.setAttribute('text-anchor', 'middle');
+              text.setAttribute('font-size', '15px');
+              text.setAttribute('fill', '#fff');
+              text.setAttribute('font-family', 'Segoe UI, Arial, sans-serif');
+              text.setAttribute('dominant-baseline', 'middle');
+              wrapText(text, node.text, node._radius * 1.7, 15);
+              g.appendChild(text);
+              svg.appendChild(g);
+              if (node.children) node.children.forEach(drawNodes);
+            }
+            drawNodes(data);
+          }
+          try {
+            const mindmapData = JSON.parse('{{ results.mindmap|tojson|safe }}');
+            if (mindmapData && mindmapData.text) {
+              renderMindMap(mindmapData, 'mindmap-container');
+            } else {
+              document.getElementById('mindmap-container').innerHTML = '<div style="color:#aaa;padding:2rem;">No mind map data found.</div>';
+            }
+          } catch (e) {
+            document.getElementById('mindmap-container').innerHTML = '<div style="color:#aaa;padding:2rem;">Invalid mind map data.</div>';
+          }
+        </script>
+      </div>
+      <div class="results-col results-col-right">
+        <h2>Occupations</h2>
+        <div class="onet-container">
+          {% for job in results.onet %}
+            <div class="onet-card">
+              <div class="onet-title">
+                <a href="{{ job.link_to }}" target="_blank">{{ job.job_title }}</a>
+              </div>
+              <div class="onet-code">O*NET Code: {{ job.onet_code }}</div>
+            </div>
+          {% endfor %}
+        </div>
+        {% if not results.onet or results.onet|length == 0 %}
+          <div style="color:#aaa; margin-bottom:2rem;">No O*NET occupations found.</div>
+        {% endif %}
+      </div>
+      </div>
+    </div>
+    <style>
+      .yt-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-bottom: 2rem;
+      }
+      .yt-card {
+        background: #181818;
+        border-radius: 8px;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.13);
+        padding: 0.8rem 1.1rem;
+        min-width: 220px;
+        max-width: 340px;
+        flex: 1 1 220px;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .yt-title {
+        font-size: 1.08rem;
+        font-weight: 500;
+        margin-bottom: 0.3rem;
+      }
+      .yt-title a {
+        color: #ff5252;
+        text-decoration: none;
+      }
+      .yt-title a:hover {
+        text-decoration: underline;
+      }
+      .yt-channel {
+        font-size: 0.97rem;
+        color: #bdbdbd;
+        margin-bottom: 0.2rem;
+      }
+      .yt-desc {
+        font-size: 0.95rem;
+        color: #aaa;
+      }
+      .results-flex-layout {
+        display: flex;
+        flex-direction: row;
+        gap: 2.5rem;
+        align-items: flex-start;
+        justify-content: center;
+        margin-bottom: 2rem;
+      }
+      .results-col {
+        flex: 1 1 0;
+        min-width: 260px;
+        max-width: 420px;
+      }
+      .results-col-center {
+        max-width: 700px;
+        min-width: 340px;
+      }
+      @media (max-width: 1200px) {
+        .results-flex-layout {
+          flex-direction: column;
+        }
+        .results-col, .results-col-center {
+          max-width: 100vw;
+          min-width: 0;
+        }
+      }
+      .books-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+      }
+      .onet-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-bottom: 2rem;
+      }
+      .mindmap-bg {
+        width: 100%;
+        min-height: 400px;
+        background: #181818;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: auto;
+      }
+    </style>
+    <!-- Removed duplicate rendering of YouTube videos, courses, and mind map at the bottom. -->
+
+    <div style="margin-top:2.5rem; color:#bdbdbd; font-size:0.98rem; text-align:center;">
+      <p>This site incorporates information from <a href="https://services.onetcenter.org/" style="color:#7eb6d7;" target="_blank">O*NET Web Services</a> by the U.S. Department of Labor, Employment and Training Administration (USDOL/ETA).</p>
+    </div>
   </body>
 </html>

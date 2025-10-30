@@ -72,5 +72,67 @@ async def create_mind_map(user_query):
     print(response_content)
     validated = MindMapNode.model_validate_json(response_content) # you probabyly need a try catch block bc validatoin error
     print(validated)
+    # Return as Python dict, not JSON string
+    return json.loads(response_content)
 
-    return response_content
+async def mind_test(q):
+    print(q) # just to use the variable...
+    data = {
+        "text": "Algorithms",
+        "children": [
+            {
+                "text": "Sorting Algorithms",
+                "children": [
+                    {
+                        "text": "Bubble Sort"
+                    },
+                    {
+                        "text": "Quick Sort"
+                    },
+                    {
+                        "text": "Merge Sort"
+                    }
+                ]
+            },
+            {
+                "text": "Searching Algorithms",
+                "children": [
+                    {
+                        "text": "Linear Search"
+                    },
+                    {
+                        "text": "Binary Search"
+                    }
+                ]
+            },
+            {
+                "text": "Graph Algorithms",
+                "children": [
+                    {
+                        "text": "Breadth-First Search (BFS)"
+                    },
+                    {
+                        "text": "Depth-First Search (DFS)"
+                    },
+                    {
+                        "text": "Dijkstra's Algorithm"
+                    }
+                ]
+            },
+            {
+                "text": "Algorithm Analysis",
+                "children": [
+                    {
+                        "text": "Time Complexity"
+                    },
+                    {
+                        "text": "Space Complexity"
+                    },
+                    {
+                        "text": "Big O Notation"
+                    }
+                ]
+            }
+        ]
+    }
+    return data
