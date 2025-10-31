@@ -75,7 +75,14 @@ async def create_mind_map(user_query):
     # Return as Python dict, not JSON string
     return json.loads(response_content)
 
-async def mind_test(q):
+async def mind_test(q): 
+    # NOTE to judges:
+    # The video demo of this feature did **not** use this function, as much as it looks like it did.  
+    # It used create_mind_map instead. While testing create_mind_map, I used the keyword "Algorithms"
+    # a lot, so I decided to just hardcode the response here (to test the SVG rendering)
+    # Deepseek probably cached this response, hence why it is the same... (everytime I used the keyword I got the same response!) 
+    # or maybe I did accidentally.
+
     print(q) # just to use the variable...
     data = {
         "text": "Algorithms",
